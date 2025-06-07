@@ -1,0 +1,899 @@
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f6f9fc;
+    margin: 0;
+    padding: 0;
+    color: #222;
+}
+
+header {
+    text-align: center;
+    background: #1a237e;
+    color: #fff;
+    padding: 1.5em 0 1em 0;
+}
+
+#logo {
+    max-width: 240px; /* doubled from 120px */
+    margin-bottom: 0.5em;
+}
+
+h1 {
+    margin: 0 0 0.5em 0;
+    font-size: 2em;
+    letter-spacing: 0.04em;
+}
+
+main {
+    max-width: 700px;
+    margin: 2em auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(30,40,60,0.08);
+    padding: 2em 2em 2em 2em;
+}
+
+form {
+    margin-bottom: 2em;
+}
+
+.section {
+    margin-bottom: 2em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.section:last-child {
+    border-bottom: none;
+}
+
+label {
+    display: block;
+    margin-bottom: 1em;
+    font-weight: 500;
+}
+
+input[type="number"], select {
+    margin-top: 0.3em;
+    padding: 0.5em;
+    border-radius: 5px;
+    border: 1px solid #bdbdbd;
+    font-size: 1em;
+    width: 100%;
+    max-width: 250px;
+    box-sizing: border-box;
+}
+
+button[type="submit"] {
+    background: #1a237e;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.8em 2em;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1em;
+    transition: background 0.2s;
+}
+button[type="submit"]:hover {
+    background: #3949ab;
+}
+
+/* Color coding for fields */
+.field-ph input { background: #ffebee; border-left: 5px solid #d32f2f; }    /* Red */
+.field-alk input { background: #e8f5e9; border-left: 5px solid #388e3c; }    /* Green */
+.field-ch input { background: #e3f2fd; border-left: 5px solid #1976d2; }    /* Blue */
+.field-tds input { background: #ececec; border-left: 5px solid #757575; }    /* Gray */
+.field-fac input { background: #fffde7; border-left: 5px solid #fbc02d; }    /* Yellow */
+.field-cya input { background: #f3e5f5; border-left: 5px solid #8e24aa; }    /* Purple */
+.field-salt input { background: #fff3e0; border-left: 5px solid #ef6c00; }    /* Orange */
+.field-temp input { background: #ececec; border-left: 5px solid #757575; }    /* Gray */
+/* Chemical dosage cards */
+.chem-card {
+    margin: 1em 0;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.chem-card.ph { background: #ffebee; }
+.chem-card.alk { background: #e8f5e9; }
+.chem-card.ch { background: #e3f2fd; }
+.chem-card.fac { background: #fffde7; }
+.chem-card.cya { background: #f3e5f5; }
+.chem-card.salt { background: #fff3e0; }
+.chem-card.acid { background: #ffebee; }
+
+.chem-card strong {
+    color: #000;
+    font-size: 1.1em;
+}
+
+/* Results section styling */
+#results {
+    background: #fff;
+    border-radius: 10px;
+    padding: 2em 1.5em;
+    margin-top: 2em;
+    font-size: 1.08em;
+    box-shadow: 0 1px 6px rgba(30,40,60,0.06);
+}
+/* TDS note */
+.field-tds span {
+    display: block;
+    margin-top: 0.2em;
+    font-size: 0.85em;
+    font-style: italic;
+    color: #757575;
+}
+
+/* Salt generator section */
+.section h2 {
+    color: #1a237e;
+    font-size: 1.15em;
+    margin-bottom: 0.7em;
+}
+
+/* Results styling */
+#results {
+    background: #f7fafc;
+    border-radius: 10px;
+    padding: 2em 1.5em;
+    margin-top: 2em;
+    font-size: 1.08em;
+    box-shadow: 0 1px 6px rgba(30,40,60,0.06);
+}
+
+#results h3 {
+    color: #1a237e;
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+    font-size: 1.25em;
+}
+
+#results h4 {
+    color: #3949ab;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+    font-size: 1.1em;
+}
+
+#results ul {
+    margin: 0 0 1em 1.5em;
+    padding: 0;
+}
+
+#results li {
+    margin-bottom: 0.4em;
+}
+
+#results table {
+    width: 100%;
+    max-width: 500px;
+    margin: 1em auto 1.5em auto;
+    border-collapse: collapse;
+    font-size: 0.98em;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(30,40,60,0.04);
+}
+
+#results th, #results td {
+    padding: 0.6em 0.8em;
+    text-align: left;
+}
+
+#results th {
+    background: #e3eafc;
+    color: #1a237e;
+    font-weight: 600;
+    border-bottom: 1px solid #bdbdbd;
+}
+
+#results tr:nth-child(even) td {
+    background: #f6f9fc;
+}
+
+#results tr td {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#results tr:last-child td {
+    border-bottom: none;
+}
+
+#results em {
+    color: #757575;
+    font-size: 0.95em;
+}
+
+.error {
+    color: #b71c1c;
+    font-weight: 600;
+    margin: 1em 0;
+    font-size: 1.1em;
+}
+
+.chlorine-type-btn.selected {
+    background: #1976d2;
+    color: #fff;
+    border: 2px solid #1565c0;
+    font-weight: bold;
+    box-shadow: 0 2px 8px #1565c033;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+  }
+  .chlorine-type-btn {
+    background: #f5f5f5;
+    color: #222;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    padding: 8px 16px;
+    margin: 0 8px 8px 0;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+  }
+  .chlorine-type-btn:hover {
+    background: #e3f2fd;
+    border: 1.5px solid #1976d2;
+  }
+  details {
+      margin: 24px 0;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      background: #fafafa;
+      box-shadow: 0 1px 2px #0001;
+      padding: 0 0 12px 0;
+    }
+    
+    details > summary {
+      font-size: 1.1em;
+      cursor: pointer;
+      padding: 12px 16px;
+      background: #e0e0e0;
+      border-radius: 6px 6px 0 0;
+      outline: none;
+      font-weight: bold;
+    }
+    
+    details[open] > summary {
+      border-bottom: 1px solid #bbb;
+    }
+    
+    .water-parameter-charts, .sanitizer-parameter-charts {
+      padding: 8px 16px 0 16px;
+    }
+.compliance {
+    margin: 24px 0;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    background: #fafafa;
+    box-shadow: 0 1px 2px #0001;
+    padding: 0 0 12px 0;
+  }
+  .compliance-summary-details > summary {
+    font-size: 1.1em;
+    cursor: pointer;
+    padding: 12px 16px;
+    background: #e0e0e0;
+    border-radius: 6px 6px 0 0;
+    outline: none;
+    font-weight: bold;
+  }
+  .compliance-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(30,40,60,0.04);
+  }
+  .compliance-summary-table th, .compliance-summary-table td {
+    padding: 0.6em 0.8em;
+    text-align: center;
+  }
+  .compliance-summary-table th {
+    background: #e3eafc;
+    color: #1a237e;
+    font-weight: 600;
+    border-bottom: 1px solid #bdbdbd;
+  }
+  .compliance-summary-table tr.compliant td {
+    background: #e8f5e9;
+  }
+  .compliance-summary-table tr.noncompliant td {
+    background: #ffebee;
+  }
+  .status-ok {
+    color: #388e3c;
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+  .status-bad {
+    color: #b71c1c;
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+  .compliance-warnings {
+    margin: 1em 0 0 0;
+    padding-left: 1.5em;
+    color: #b71c1c;
+    font-weight: 500;
+  }
+  .state-name {
+    font-size: 1.05em;
+    margin-bottom: 0.5em;
+  }
+
+
+/* Responsive */
+@media (max-width: 600px) {
+    header {
+        padding: 1em 0 0.5em 0;
+    }
+    #logo {
+        max-width: 140px;
+    }
+    h1 {
+        font-size: 1.3em;
+    }
+    main {
+        max-width: 100%;
+        margin: 0;
+        padding: 0.5em 0.2em;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .section {
+        margin-bottom: 1.2em;
+        padding-bottom: 0.7em;
+    }
+    label {
+        font-size: 1.08em;
+        margin-bottom: 1.2em;
+    }
+    input[type="number"], select {
+        font-size: 1.15em;
+        padding: 0.7em;
+        max-width: 100%;
+        min-height: 48px;
+    }
+    button[type="submit"] {
+        width: 100%;
+        font-size: 1.15em;
+        padding: 1em 0;
+        margin-top: 1.2em;
+    }
+    #results {
+        padding: 1em 0.3em;
+        font-size: 1em;
+    }
+.alkalinity-scale.green-theme {
+    background: #eafbe7;
+    border: 2px solid #4caf50;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    max-width: 500px;
+  }
+  
+  .alkalinity-scale .scale-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95em;
+    margin-bottom: 4px;
+  }
+  
+  .alkalinity-scale .scale-bar {
+    position: relative;
+    height: 18px;
+    background: #c8e6c9;
+    border-radius: 9px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  
+  .alkalinity-scale .acceptable-range {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: #81c784;
+    border-radius: 9px;
+    z-index: 1;
+  }
+  
+  .alkalinity-scale .arrow {
+    position: absolute;
+    top: -8px;
+    font-size: 1.5em;
+    color: #388e3c;
+    z-index: 2;
+    transition: left 0.3s;
+  }
+  
+  .alkalinity-scale .current-value {
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #388e3c;
+  }
+  
+  .alkalinity-scale .dose-recommendations {
+    font-size: 1em;
+  }
+  
+  .alkalinity-scale .dose {
+    color: #388e3c;
+    font-weight: bold;
+  }  
+}
+
+/* LSI Scale and Components Table */
+.lsi-summary-section {
+  margin: 2em 0 0 0;
+  padding: 1.5em 1em 1em 1em;
+  background: #f7fafc;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(30,40,60,0.06);
+}
+
+.lsi-scale-container {
+  margin-bottom: 1.5em;
+}
+
+.lsi-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.98em;
+  margin-bottom: 4px;
+  color: #757575;
+}
+
+.lsi-scale-bar {
+  position: relative;
+  height: 22px;
+  background: #ececec;
+  border-radius: 11px;
+  margin-bottom: 8px;
+  overflow: visible;
+}
+
+.lsi-scale-bar-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ececec;
+  border-radius: 11px;
+  z-index: 1;
+}
+
+.lsi-scale-bar-indicator {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 22px;
+  border-radius: 3px;
+  z-index: 2;
+  transition: left 0.3s;
+}
+
+.lsi-scale-value {
+  position: absolute;
+  top: -28px;
+  font-size: 1em;
+  font-weight: bold;
+  color: #222;
+  background: #fff;
+  border: 1.5px solid #bbb;
+  border-radius: 6px;
+  padding: 2px 10px;
+  box-shadow: 0 1px 4px #0001;
+  transform: translateX(-50%);
+  z-index: 3;
+  min-width: 38px;
+  text-align: center;
+}
+
+.lsi-components-table {
+  width: 100%;
+  max-width: 520px;
+  margin: 1em auto 0 auto;
+  border-collapse: collapse;
+  font-size: 0.98em;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(30,40,60,0.04);
+}
+
+.lsi-components-table th, .lsi-components-table td {
+  padding: 0.6em 0.8em;
+  text-align: left;
+}
+
+.lsi-components-table th {
+  background: #e3eafc;
+  color: #1a237e;
+  font-weight: 600;
+  border-bottom: 1px solid #bdbdbd;
+}
+
+.lsi-components-table tr.field-ph td { background: #ffebee; border-left: 5px solid #d32f2f; }
+.lsi-components-table tr.field-alk td { background: #e8f5e9; border-left: 5px solid #388e3c; }
+.lsi-components-table tr.field-ch td { background: #e3f2fd; border-left: 5px solid #1976d2; }
+.lsi-components-table tr.field-tds td { background: #ececec; border-left: 5px solid #757575; }
+.lsi-components-table tr.field-cya td { background: #f3e5f5; border-left: 5px solid #8e24aa; }
+.lsi-components-table tr.field-temp td { background: #ececec; border-left: 5px solid #757575; }
+
+.lsi-components-table tr td {
+  border-bottom: 1px solid #f0f0f0;
+}
+.lsi-components-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive for LSI section */
+@media (max-width: 600px) {
+  .lsi-summary-section {
+    padding: 1em 0.3em;
+  }
+  .lsi-components-table {
+    font-size: 0.95em;
+  }
+  .lsi-scale-value {
+    font-size: 0.95em;
+    min-width: 32px;
+    padding: 2px 6px;
+  }
+}
+#results .lsi-summary-section {
+  margin: 2em 0 0 0;
+  padding: 1.5em 1em 1em 1em;
+  background: #f7fafc;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(30,40,60,0.06);
+}
+
+#results .lsi-scale-container {
+  margin-bottom: 1.5em;
+}
+
+#results .lsi-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.98em;
+  margin-bottom: 4px;
+  color: #757575;
+}
+
+#results .lsi-scale-bar {
+  position: relative;
+  height: 22px;
+  background: #ececec;
+  border-radius: 11px;
+  margin-bottom: 8px;
+  overflow: visible;
+}
+
+#results .lsi-scale-bar-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ececec;
+  border-radius: 11px;
+  z-index: 1;
+}
+
+#results .lsi-scale-bar-indicator {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 22px;
+  border-radius: 3px;
+  z-index: 2;
+  transition: left 0.3s;
+}
+
+#results .lsi-scale-value {
+  position: absolute;
+  top: -28px;
+  font-size: 1em;
+  font-weight: bold;
+  color: #222;
+  background: #fff;
+  border: 1.5px solid #bbb;
+  border-radius: 6px;
+  padding: 2px 10px;
+  box-shadow: 0 1px 4px #0001;
+  transform: translateX(-50%);
+  z-index: 3;
+  min-width: 38px;
+  text-align: center;
+}
+
+#results .lsi-components-table {
+  width: 100%;
+  max-width: 520px;
+  margin: 1em auto 0 auto;
+  border-collapse: collapse;
+  font-size: 0.98em;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(30,40,60,0.04);
+}
+
+#results .lsi-components-table th, #results .lsi-components-table td {
+  padding: 0.6em 0.8em;
+  text-align: left;
+}
+
+#results .lsi-components-table th {
+  background: #e3eafc;
+  color: #1a237e;
+  font-weight: 600;
+  border-bottom: 1px solid #bdbdbd;
+}
+
+#results .lsi-components-table tr.field-ph td { background: #ffebee; border-left: 5px solid #d32f2f; }
+#results .lsi-components-table tr.field-alk td { background: #e8f5e9; border-left: 5px solid #388e3c; }
+#results .lsi-components-table tr.field-ch td { background: #e3f2fd; border-left: 5px solid #1976d2; }
+#results .lsi-components-table tr.field-tds td { background: #ececec; border-left: 5px solid #757575; }
+#results .lsi-components-table tr.field-cya td { background: #f3e5f5; border-left: 5px solid #8e24aa; }
+#results .lsi-components-table tr.field-temp td { background: #ececec; border-left: 5px solid #757575; }
+
+#results .lsi-components-table tr td {
+  border-bottom: 1px solid #f0f0f0;
+}
+#results .lsi-components-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive for LSI section */
+@media (max-width: 600px) {
+  #results .lsi-summary-section {
+    padding: 1em 0.3em;
+  }
+  #results .lsi-components-table {
+    font-size: 0.95em;
+  }
+  #results .lsi-scale-value {
+    font-size: 0.95em;
+    min-width: 32px;
+    padding: 2px 6px;
+  }
+}
+/* --- LSI Scale: Value label above, scale labels below --- */
+.lsi-scale-container,
+#results .lsi-scale-container {
+  margin-bottom: 2.5em;
+  position: relative;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+.lsi-scale-bar,
+#results .lsi-scale-bar {
+  position: relative;
+  height: 22px;
+  background: #ececec;
+  border-radius: 11px;
+  margin-bottom: 0; /* No margin below bar */
+  overflow: visible;
+  order: 1;
+}
+
+.lsi-scale-value,
+#results .lsi-scale-value {
+  position: absolute;
+  top: -28px; /* Value label above the bar */
+  font-size: 1em;
+  font-weight: bold;
+  color: #222;
+  background: #fff;
+  border: 1.5px solid #bbb;
+  border-radius: 6px;
+  padding: 2px 10px;
+  box-shadow: 0 1px 4px #0001;
+  transform: translateX(-50%);
+  z-index: 3;
+  min-width: 38px;
+  text-align: center;
+}
+
+.lsi-scale-labels,
+#results .lsi-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.98em;
+  margin-top: 8px;
+  color: #757575;
+  order: 2; /* Ensure labels are below the bar */
+}
+
+/* Responsive for LSI section */
+@media (max-width: 600px) {
+  .lsi-scale-value,
+  #results .lsi-scale-value {
+    font-size: 0.95em;
+    min-width: 32px;
+    padding: 2px 6px;
+    top: -24px;
+  }
+  .lsi-scale-container,
+  #results .lsi-scale-container {
+    min-height: 54px;
+  }
+}
+/* ... existing styles ... */
+
+.salt-dose-result {
+  background: #fff3e0;
+  border-left: 5px solid #ef6c00;
+  padding: 18px 22px;
+  margin: 18px 0 8px 0;
+  border-radius: 7px;
+  font-size: 1.08em;
+  color: #333;
+  box-shadow: 0 1px 4px #0001;
+}
+
+.salt-dose-result h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #fff3e0;
+  font-size: 1.13em;
+  font-weight: bold;
+}
+
+.salt-dose-result p {
+  margin: 0;
+  font-size: 1.05em;
+  font-weight: 500;
+}
+
+/* Optional: style for the collapsible salt dose section */
+details.salt-dose-details > summary {
+  color: #333;
+  font-weight: bold;
+  font-size: 1.08em;
+  cursor: poin6ter;
+}
+
+.salt-dose-parameter-charts {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+/* --- State and Pool Type Button Styles --- */
+.state-type-btn, .pool-type-btn {
+  background: #f5f5f5;
+  color: #222;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  padding: 8px 16px;
+  margin: 0 8px 8px 0;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.state-type-btn.selected, .pool-type-btn.selected {
+  background: #1976d2;
+  color: #fff;
+  border: 2px solid #1565c0;
+  font-weight: bold;
+  box-shadow: 0 2px 8px #1565c033;
+}
+.state-type-btn:hover, .pool-type-btn:hover {
+  background: #e3f2fd;
+  border: 1.5px solid #1976d2;
+}
+.dose-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+.dose-table th, .dose-table td {
+  border: 1px solid #90caf9;
+  padding: 0.5em 1em;
+  text-align: center;
+}
+.dose-table th {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+#thioCalcModal > div {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.expert-dosage-card {
+  padding: 1em;
+  margin-bottom: 1em;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0; /* Light border for definition */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Subtle shadow */
+}
+
+/* Ensure text within cards is readable on different backgrounds */
+.expert-dosage-card strong {
+  color: #333; /* Darker text for parameter names */
+}
+.expert-dosage-card ul {
+  margin-top: 0.5em;
+  padding-left: 20px; /* Indent dosage list */
+}
+.expert-dosage-card li {
+  margin-bottom: 0.3em;
+}
+/* ... your existing styles ... */
+
+.expert-mode-toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Keeps it centered as before */
+  margin-top: 0.5em; /* Adjusted margin */
+  margin-bottom: 1.5em;
+}
+
+.expert-mode-toggle-container .toggle-text-label {
+  font-weight: bold;
+  margin-right: 10px;
+  color: #1976d2; /* Matches other form labels */
+  cursor: pointer; /* Make the text label also clickable */
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px; /* Width of the toggle */
+  height: 26px; /* Height of the toggle */
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider (the track of the toggle) */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc; /* Default background of the track */
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 26px; /* Rounded track */
+}
+
+/* The knob of the toggle */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px; /* Knob height */
+  width: 20px;  /* Knob width */
+  left: 3px;    /* Knob initial position */
+  bottom: 3px;  /* Knob initial position */
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+  border-radius: 50%; /* Circular knob */
+}
+
+input:checked + .slider {
+  background-color: #1976d2; /* Active color - matches your theme */
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #1976d2; /* Focus outline */
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(24px); /* Knob movement distance */
+  -ms-transform: translateX(24px);
+  transform: translateX(24px);
+}

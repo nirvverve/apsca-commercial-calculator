@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Updated title to reflect the new version -->
+  <title>APS Commercial Pool Calculator v0.3.1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+    background: linear-gradient(135deg, #b3e0ff 0%, #e0f7fa 100%);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    /* Add padding-bottom to prevent footer from overlapping content */
+    padding-bottom: 80px; /* Adjust as needed based on footer height */
+    position: relative; /* Needed for potential absolute positioning of footer if desired */
+    min-height: 100vh; /* Ensure body takes at least full viewport height */
+    box-sizing: border-box;
+    }
+    .container {
+    max-width: 800px;
+    margin: 2em auto;
+    background: rgba(255,255,255,0.95);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    padding: 2em 2.5em 2em 2.5em;
+    }
+    .logo {
+    display: block;
+    margin: 0 auto 1.5em auto;
+    max-width: 220px;
+    }
+    h1 {
+    text-align: center;
+    color: #1976d2;
+    margin-bottom: 0.2em; /* Adjusted margin for sub-version text */
+    letter-spacing: 1px;
+    }
+    /* Style for the version number under the main H1 title */
+    .header-version {
+      text-align: center;
+      color: #333; /* Slightly muted color */
+      font-size: 1.00em; /* Super small text */
+      margin-bottom: 1em; /* Space below version number */
+    }
+    form.pool-form {
+    background: linear-gradient(135deg, #e3f2fd 0%, #b3e5fc 100%);
+    border-radius: 12px;
+    padding: 2em 1.5em 1.5em 1.5em;
+    box-shadow: 0 2px 8px rgba(33,150,243,0.08);
+    margin-bottom: 2em;
+    }
+    .form-category {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #1976d2;
+    margin: 1.5em 0 0.5em 0;
+    border-bottom: 2px solid #90caf9;
+    padding-bottom: 0.2em;
+    }
+    .form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.2em;
+    border-radius: 6px;
+    }
+    .form-row label {
+    flex: 0 0 180px;
+    font-weight: 500;
+    color: #1976d2;
+    margin-right: 1em;
+    }
+    .form-row input, .form-row select {
+    flex: 1;
+    padding: 0.5em 0.7em;
+    border: 1px solid #90caf9;
+    border-radius: 6px;
+    font-size: 1em;
+    background: #fff;
+    }
+    .form-row input[type="number"]::-webkit-input-placeholder {
+    color: #b0bec5;
+    }
+    .form-row input[type="number"]::-moz-placeholder {
+    color: #b0bec5;
+    }
+    .form-row input[type="number"]:-ms-input-placeholder {
+    color: #b0bec5;
+    }
+    .form-row input[type="number"]::placeholder {
+    color: #b0bec5;
+    }
+    .form-actions {
+    text-align: center;
+    margin-top: 2em;
+    }
+    .form-actions button {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.8em 2.2em;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(33,150,243,0.08);
+    transition: background 0.2s;
+    }
+    .form-actions button:hover {
+    background: #1565c0;
+    }
+    /* Pool-like border */
+    .pool-border {
+    border: 4px solid #4fc3f7;
+    border-radius: 24px;
+    box-shadow: 0 0 24px #81d4fa55;
+    padding: 1.5em;
+    margin-bottom: 2em;
+    }
+    /* Color coding for test parameters */
+    .chlorine-yellow { background: #fffde7; }
+    .cya-purple { background: #f3e5f5; }
+    .ph-red { background: #ffebee; }
+    .alk-green { background: #e8f5e9; }
+    .calcium-blue { background: #e3f2fd; }
+    .other-gray { background: #f5f5f5; }
+
+    /* Footer Styles */
+    .app-footer {
+      text-align: center;
+      padding: 15px 0;
+      background-color: rgba(25, 118, 210, 0.1); /* Light blue, slightly transparent */
+      color: #1976d2; /* APS blue */
+      font-size: 0.9em;
+      border-top: 1px solid #90caf9;
+      width: 100%;
+      position: absolute; /* Position at the bottom */
+      bottom: 0;
+      left: 0;
+    }
+    .app-footer .footer-main-text {
+      font-weight: 500;
+    }
+    .app-footer .footer-version {
+      display: block;
+      font-size: 1.00em; /* Slightly smaller for version */
+      color: #333; /* Muted color for version */
+      margin-top: 3px;
+    }
+
+    @media (max-width: 600px) {
+    .container { padding: 1em; }
+    .form-row label { flex: 0 0 110px; }
+    /* Ensure footer text is readable on small screens */
+    .app-footer {
+        font-size: 0.8em;
+        padding: 10px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="logo.png" alt="APS Commercial Pool Calculator Logo" class="logo">
+    <h1>APS Commercial Pool Calculator</h1>
+    <!-- Added version number under the main title -->
+    <div class="header-version">v0.3.1</div>
+
+    <div style="text-align:center; margin-bottom:1.5em;">
+    <button id="openThioCalc" type="button" style="background:#ffb300;color:#222;font-weight:bold;padding:0.7em 1.5em;border-radius:8px;border:none;cursor:pointer;">
+    Click Here for Calculator to Lower Chlorine Level
+    </button>
+    </div>
+    
+    <!-- Sodium Thiosulfate Modal/Section (hidden by default) -->
+    <div id="thioCalcModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;padding:2em 2.5em;border-radius:16px;max-width:420px;margin:auto;box-shadow:0 8px 32px #0002;position:relative;">
+    <button id="closeThioCalc" style="position:absolute;top:1em;right:1em;background:none;border:none;font-size:1.5em;cursor:pointer;">&times;</button>
+    <h2>Lower Chlorine with Sodium Thiosulfate</h2>
+    <form id="thioForm" autocomplete="off">
+    <div class="form-row">
+    <label for="thioPoolVolume">Pool Volume (gallons):</label>
+    <input type="number" id="thioPoolVolume" min="500" max="500000" required placeholder="e.g. 150000">
+    </div>
+    <div class="form-row">
+    <label for="thioCurrentFC">Current Free Chlorine (ppm):</label>
+    <input type="number" id="thioCurrentFC" min="0" max="30" step="0.1" required placeholder="e.g. 15.0">
+    </div>
+    <div class="form-row">
+    <label for="thioPH">Current pH:</label>
+    <input type="number" id="thioPH" min="6.8" max="8.2" step="0.01" required placeholder="e.g. 7.5">
+    </div>
+    <div class="form-actions" style="margin-top:1.2em;">
+    <button type="submit" style="background:#1976d2;color:#fff;">Calculate</button>
+    </div>
+    </form>
+    <div id="thioResults" style="margin-top:1.5em;"></div>
+    </div>
+    </div>
+    <form id="poolForm" class="pool-form pool-border" autocomplete="off">
+    <div class="form-row">
+    <label for="poolCapacity">Pool Volume (gallons):</label>
+    <input type="number" id="poolCapacity" name="poolCapacity" min="500" max="500000" required placeholder="e.g. 150000">
+    </div>
+    <!-- Expert Mode Toggle -->
+ <!-- Expert Mode Toggle - UPDATED STRUCTURE -->
+ <div class="expert-mode-toggle-container">
+  <label for="expertMode" class="toggle-text-label">Expert Mode</label> <!-- Text label, also clickable -->
+  <label class="switch">
+    <input type="checkbox" id="expertMode">
+    <span class="slider"></span>
+  </label>
+</div>
+<!-- Expert Mode Section (hidden by default) -->
+  <div id="expertModeSection" style="display:none; margin-bottom:2em;">
+  <fieldset style="border:2px solid #1976d2; border-radius:10px; padding:1em 1.5em; background:#e3f2fd;">
+    <legend style="font-weight:bold;color:#1976d2;">Custom Balance Targets</legend>
+    <div class="form-row chlorine-yellow">
+    <label for="targetFreeChlorine">Target Free Chlorine (ppm):</label>
+    <input type="number" id="targetFreeChlorine" min="0" step="0.1">
+    </div>
+    <div class="form-row ph-red">
+    <label for="targetPh">Target pH:</label>
+    <input type="number" id="targetPh" min="6.8" max="8.2" step="0.01">
+    </div>
+    <div class="form-row alk-green">
+    <label for="targetAlkalinity">Target Alkalinity (ppm):</label>
+    <input type="number" id="targetAlkalinity" min="0" max="500">
+    </div>
+    <div class="form-row calcium-blue">
+    <label for="targetCalcium">Target Calcium Hardness (ppm):</label>
+    <input type="number" id="targetCalcium" min="0" max="1000">
+    </div>
+    <div class="form-row cya-purple">
+    <label for="targetCya">Target Cyanuric Acid (ppm):</label>
+    <input type="number" id="targetCya" min="0" max="200">
+    </div>
+    <div class="form-row other-gray">
+    <label for="targetSalt">Target Salt (ppm):</label>
+    <input type="number" id="targetSalt" min="0" max="6000">
+    </div>
+    <div style="margin-top:1em;">
+    <strong>LSI (Current):</strong> <span id="lsiCurrentDisplay">-</span><br>
+    <strong>LSI (Targets):</strong> <span id="lsiTargetDisplay">-</span>
+    </div>
+  </fieldset> 
+  </div>
+    <div class="form-category">Disinfection</div>
+    <div class="form-row chlorine-yellow">
+    <label for="freeChlorine">Free Chlorine (ppm):</label>
+    <input type="number" id="freeChlorine" name="freeChlorine" step="0.1" min="0" required placeholder="e.g. 2.0">
+    </div>
+    <div class="form-row chlorine-yellow">
+    <label for="totalChlorine">Total Chlorine (ppm):</label>
+    <input type="number" id="totalChlorine" name="totalChlorine" step="0.1" min="0" required placeholder="e.g. 2.2">
+    </div>
+    <div class="form-row chlorine-yellow">
+    <label for="combinedChlorine">Combined Chlorine (ppm):</label>
+    <input type="number" id="combinedChlorine" name="combinedChlorine" step="0.01" min="0" readonly placeholder="Auto">
+    </div>
+    <div class="form-row cya-purple">
+    <label for="cya">Cyanuric Acid (CYA, ppm):</label>
+    <input type="number" id="cya" name="cya" min="0" max="200" required placeholder="e.g. 30">
+    </div>
+
+    <div class="form-category">Water Balance</div>
+    <div class="form-row ph-red">
+    <label for="ph">pH:</label>
+    <input type="number" id="ph" name="ph" step="0.01" min="6.8" max="8.2" required placeholder="e.g. 7.5">
+    </div>
+    <div class="form-row alk-green">
+    <label for="alkalinity">Alkalinity (ppm):</label>
+    <input type="number" id="alkalinity" name="alkalinity" min="0" max="500" required placeholder="e.g. 100">
+    </div>
+    <div class="form-row calcium-blue">
+    <label for="calcium">Calcium Hardness (ppm):</label>
+    <input type="number" id="calcium" name="calcium" min="0" max="1000" required placeholder="e.g. 250">
+    </div>
+
+    <div class="form-category">Other</div>
+    <div class="form-row other-gray">
+    <label for="tds">TDS (ppm):</label>
+    <input type="number" id="tds" name="tds" min="0" max="10000" value="1000" required placeholder="Default: 1000">
+    </div>
+    <div class="form-row other-gray">
+    <label for="temperature">Temperature (°F):</label>
+    <input type="number" id="temperature" name="temperature" min="32" max="110" value="84" required placeholder="Default: 84">
+    </div>
+    <div class="form-row other-gray">
+    <label for="saltLevel">Current Salt Level (ppm):</label>
+    <input type="number" id="saltLevel" name="saltLevel" min="0" max="6000" value="0" required placeholder="Default: 0">
+    </div>
+    <div class="form-row other-gray">
+    <label for="targetSaltLevel">Target Salt Level (ppm):</label>
+    <select id="targetSaltLevel" name="targetSaltLevel">
+    <option value="0">None</option>
+    <option value="2800">2800</option>
+    <option value="3000">3000</option>
+    <option value="3200">3200</option>
+    <option value="3600">3500</option>
+    <option value="4000">4000</option>
+    <option value="4500">4500</option>
+    <option value="5000">5000</option>
+    </select>
+    </div>
+
+    <div class="form-row">
+    <label>State:</label>
+    <div id="stateOptions"></div>
+    </div>
+    <div class="form-row">
+    <label>Pool Type:</label>
+    <div id="poolTypeOptions"></div>
+    </div>
+    <div class="form-row">
+    <label>Chlorine Type:</label>
+    <div id="chlorineTypeOptions"></div>
+    </div>
+    <div class="form-actions">
+    <button type="submit">Calculate</button>
+    </div>
+    </form>
+    <div id="results"></div>
+  </div> <!-- Closing .container div -->
+
+  <!-- Added Footer -->
+  <footer class="app-footer">
+    <span class="footer-main-text">Powered By Amenity Pool Services</span>
+    <span class="footer-version">v0.3.1</span>
+  </footer>
+
+  <script src="script.js" type="module"></script>
+</body>
+</html>
