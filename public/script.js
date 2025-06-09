@@ -11,64 +11,130 @@ import { renderTodayDosageCards } from './WaterBalanceUtils.js';
 import { renderBreakpointChlorination } from './BreakpointChlorinationDisplay.js';
  
 // --- State and Pool Type Buttons ---
-const stateOptionsDiv = document.getElementById('stateOptions');
+// MODIFIED: State selection logic to use a dropdown
+const stateSelectElement = document.getElementById('stateSelect'); // Get the new select element
 const poolTypeOptionsDiv = document.getElementById('poolTypeOptions');
 
 // List your supported states and pool types
-const stateList = ["Arizona", "Florida", "Texas"];
-let selectedState = null;
+const stateList = Object.keys(poolStandards);
+let selectedState = null; // Keep this variable to store the selection
 
-stateList.forEach(state => {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'state-type-btn';
-  btn.textContent = state;
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.state-type-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedState = state;
+// Helper function to format state names for display
+function formatStateNameForDisplay(stateKey) {
+  if (!stateKey) return '';
+  // Insert a space before any uppercase letter that is not at the start of the string
+  // and is preceded by a lowercase letter or another uppercase letter (to handle acronyms like NYC correctly if they were part of a longer name)
+  // A simpler version for current keys: insert space before any capital letter not at the start.
+  return stateKey.replace(/([A-Z])/g, ' $1').replace(/^ /, ''); // Add space, then trim leading space if first char was capital
+}
+
+// Function to populate the state dropdown
+function populateStateDropdown() {
+  if (!stateSelectElement) return;
+
+  stateList.forEach(stateKey => { // Changed variable name to stateKey for clarity
+    const option = document.createElement('option');
+    option.value = stateKey; // The value remains the original key, e.g., "SouthCarolina"
+    option.textContent = formatStateNameForDisplay(stateKey); // Display formatted name, e.g., "South Carolina"
+    stateSelectElement.appendChild(option);
   });
-  stateOptionsDiv.appendChild(btn);
-});
 
-const poolTypeList = ["pool", "spa"];
+  // Load saved state and set event listener
+  const savedState = localStorage.getItem('selectedStateAPSComm');
+  if (savedState && stateList.includes(savedState)) {
+    stateSelectElement.value = savedState;
+    selectedState = savedState;
+  }
+
+  stateSelectElement.addEventListener('change', (event) => {
+    selectedState = event.target.value;
+    if (selectedState) {
+    localStorage.setItem('selectedStateAPSComm', selectedState);
+    } else {
+    localStorage.removeItem('selectedStateAPSComm'); // Remove if "-- Select --" is chosen
+    }
+    // Potentially trigger other updates if needed when state changes, e.g., re-filtering pool types if they depended on state
+  });
+}
+// Pool Type buttons remain largely the same
+const poolTypeList = ["pool", "spa"]; // Assuming these are always the options
 let selectedPoolType = null;
 
-poolTypeList.forEach(type => {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'pool-type-btn';
-  btn.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.pool-type-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedPoolType = type;
+// Function to create pool type buttons and handle selection with localStorage
+function setupPoolTypeButtons() {
+  if (!poolTypeOptionsDiv) return;
+  poolTypeOptionsDiv.innerHTML = ''; // Clear any existing buttons
+
+  const savedPoolType = localStorage.getItem('selectedPoolTypeAPSComm');
+
+  poolTypeList.forEach(type => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pool-type-btn'; // Use existing class for styling
+    btn.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+    btn.dataset.poolType = type; // Store type in data attribute
+
+    if (savedPoolType === type) {
+      btn.classList.add('selected');
+      selectedPoolType = type;
+    }
+
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#poolTypeOptions .pool-type-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedPoolType = type;
+      localStorage.setItem('selectedPoolTypeAPSComm', selectedPoolType);
+    });
+    poolTypeOptionsDiv.appendChild(btn);
   });
-  poolTypeOptionsDiv.appendChild(btn);
-});
+}
+// END MODIFICATION for pool type buttons (added localStorage)
+
+
 // --- Chlorine Type Buttons ---
 const chlorineTypeOptionsDiv = document.getElementById('chlorineTypeOptions');
 let selectedChlorineType = null;
 
-// Only show allowed chlorine types (exclude 10% liquid and 68% cal-hypo)
-const allowedChlorineTypes = chlorineTypes.filter(type =>
-  type.name !== "Liquid Chlorine (10%)" && type.name !== "Calcium Hypochlorite (68%)"
-);
+// Function to create chlorine type buttons and handle selection with localStorage
+function setupChlorineTypeButtons() {
+  if (!chlorineTypeOptionsDiv) return;
+  chlorineTypeOptionsDiv.innerHTML = ''; // Clear existing
 
-// Dynamically create clickable chlorine type buttons
-allowedChlorineTypes.forEach(type => {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'chlorine-type-btn';
-  btn.textContent = type.name;
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.chlorine-type-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedChlorineType = type;
+  const allowedChlorineTypes = chlorineTypes.filter(type =>
+    type.name !== "Liquid Chlorine (10%)" && type.name !== "Calcium Hypochlorite (68%)"
+  );
+
+  const savedChlorineTypeId = localStorage.getItem('selectedChlorineTypeIdAPSComm');
+
+  allowedChlorineTypes.forEach(type => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chlorine-type-btn'; // Use existing class
+    btn.textContent = type.name;
+    btn.dataset.chlorineTypeId = type.id; // Store ID for saving
+    btn.dataset.chlorineTypeConcentration = type.concentration; // Store concentration
+
+    if (savedChlorineTypeId === type.id) { // Compare with saved ID
+        const savedConcentration = parseFloat(localStorage.getItem('selectedChlorineTypeConcentrationAPSComm'));
+        // Ensure concentration also matches if multiple types share an ID (though 'liquid'/'cal-hypo' are distinct enough here)
+        if (type.concentration === savedConcentration) {
+            btn.classList.add('selected');
+            selectedChlorineType = type;
+        }
+    }
+
+
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#chlorineTypeOptions .chlorine-type-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedChlorineType = type;
+      localStorage.setItem('selectedChlorineTypeIdAPSComm', type.id);
+      localStorage.setItem('selectedChlorineTypeConcentrationAPSComm', type.concentration.toString());
+    });
+    chlorineTypeOptionsDiv.appendChild(btn);
   });
-  chlorineTypeOptionsDiv.appendChild(btn);
-});
-
+}
+// END MODIFICATION for chlorine type buttons (added localStorage)
 // --- Combined Chlorine Calculation (live update) ---
 const freeChlorineInput = document.getElementById('freeChlorine');
 const totalChlorineInput = document.getElementById('totalChlorine');
@@ -186,16 +252,16 @@ document.getElementById('poolForm').addEventListener('submit', async function(e)
   e.preventDefault();
 
   // Validate chlorine type selection
-  if (!selectedChlorineType) {
-    alert('Please select a chlorine type.');
-    return;
-  }
-  if (!selectedState) {
-    alert('Please select a state.');
+  if (!selectedState) { // Check selectedState variable
+    alert('Please select a state/city.');
     return;
   }
   if (!selectedPoolType) {
     alert('Please select a pool type.');
+    return;
+  }
+  if (!selectedChlorineType) {
+    alert('Please select a chlorine type.');
     return;
   }
   // Gather all input values
@@ -705,6 +771,9 @@ resultsDiv.innerHTML = expertHtml;
 });
 // --- Expert Mode Logic ---
 document.addEventListener('DOMContentLoaded', () => {
+  populateStateDropdown();
+  setupPoolTypeButtons();
+  setupChlorineTypeButtons();
   // --- Expert Mode DOM lookups ---
   const expertModeCheckbox = document.getElementById('expertMode');
   const expertModeSection = document.getElementById('expertModeSection');
@@ -787,6 +856,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // MODIFIED updateLSIDisplay to use API
   async function updateLSIDisplay() {
+    const lsiCurrentDisplay = document.getElementById('lsiCurrentDisplay'); // Ensure these are accessible
+    const lsiTargetDisplay = document.getElementById('lsiTargetDisplay');
+    const targetInputs = window.targetInputs; // Assuming it's made global or passed
     // Get current values from main form inputs
     const currentParams = {
       ph: parseFloat(document.getElementById('ph').value) || 0,

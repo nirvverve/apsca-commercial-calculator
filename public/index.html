@@ -162,8 +162,8 @@
 </head>
 <body>
   <div class="container">
-    <img src="logo.png" alt="APS Commercial Pool Calculator Logo" class="logo">
-    <h1>APS Commercial Pool Calculator</h1>
+    <img src="CA Logo.jpg" alt="CA Commercial Pool Calculator Logo" class="logo">
+    <h1>CA Commercial Pool Calculator</h1>
     <!-- Added version number under the main title -->
     <div class="header-version">v0.5.0</div>
 
@@ -305,10 +305,15 @@
     </select>
     </div>
 
+    <!-- MODIFIED: Replaced stateOptions div with a select dropdown -->
     <div class="form-row">
-    <label>State:</label>
-    <div id="stateOptions"></div>
-    </div>
+      <label for="stateSelect">State/City:</label>
+      <select id="stateSelect" name="stateSelect">
+          <!-- Options will be populated by script.js -->
+          <option value="">-- Select State/City --</option>
+      </select>
+      </div>
+      <!-- END MODIFICATION -->
     <div class="form-row">
     <label>Pool Type:</label>
     <div id="poolTypeOptions"></div>
@@ -326,7 +331,7 @@
 
   <!-- Added Footer -->
   <footer class="app-footer">
-    <span class="footer-main-text">Powered By Amenity Pool Services</span>
+    <span class="footer-main-text">Powered by Commercial Aquatics</span>
     <span class="footer-version">v0.5.0</span>
   </footer>
 
