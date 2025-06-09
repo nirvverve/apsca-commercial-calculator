@@ -5,6 +5,8 @@ const { getBreakpointChlorination } = require('./server-breakpoint-utils.js');
 const { getWaterBalanceSteps } = require('./server-water-balance-utils.js')
 const { advancedLSI, getLSIFactors } = require('./server-lsiutils.js')
 const { getSaltDose } = require('./server-salt-dose-utils.js');
+const { formatChlorineDose } = require('./server-chlorine-dose-utils');
+const { getThiosulfateDoseTableData } = require('./server-thiosulfate-utils.js')
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Use port 3000 for now
@@ -123,6 +125,87 @@ app.post('/api/calculate-breakpoint', (req, res) => {
     }
   });
 
+  // --- NEW API ENDPOINT for Chlorine Dose Table ---
+app.post('/api/calculate-chlorine-dose-table', (req, res) => {
+  console.log("Server received in /api/calculate-chlorine-dose-table, req.body:", JSON.stringify(req.body, null, 2));
+  const {
+      currentFC,
+      poolVolume,
+      chlorineTypeId, // 'liquid' or 'cal-hypo'
+      chlorineConcentration, // e.g., 0.125 or 0.73
+      minFC,
+      maxFC,
+      increment,
+      poolType // 'pool' or 'spa'
+  } = req.body;
+
+  if (poolVolume <= 0 || chlorineConcentration <= 0) {
+      return res.status(400).json({ error: "Invalid pool volume or chlorine concentration." });
+  }
+
+  const tableRows = [];
+  for (let fc = minFC; fc <= maxFC; fc += increment) {
+      const doseLbs = fc > currentFC
+          ? ((fc - currentFC) * poolVolume * 0.00000834) / chlorineConcentration
+          : 0;
+
+      let doseDisplay = '-';
+      if (doseLbs > 0.001) { // Only format if dose is significant
+          doseDisplay = formatChlorineDose({
+              lbs: doseLbs,
+              poolType: poolType,
+              chlorineType: chlorineTypeId
+          });
+      }
+      tableRows.push({
+          targetFC: fc.toFixed(2), // Keep FC formatting consistent
+          doseDisplay: doseDisplay
+      });
+  }
+  res.json({ tableRows });
+});
+
+// --- NEW API ENDPOINT for Formatting a Single Chlorine Dose ---
+app.post('/api/format-chlorine-dose', (req, res) => {
+  console.log("Server received in /api/format-chlorine-dose, req.body:", JSON.stringify(req.body, null, 2));
+  const {
+      lbs,
+      poolType,
+      chlorineTypeId // 'liquid' or 'cal-hypo'
+  } = req.body;
+
+  if (typeof lbs !== 'number' || lbs < 0) {
+      return res.status(400).json({ error: "Invalid lbs value." });
+  }
+  if (!poolType || !chlorineTypeId) {
+      return res.status(400).json({ error: "Missing poolType or chlorineTypeId." });
+  }
+
+  const formattedDose = formatChlorineDose({
+      lbs,
+      poolType,
+      chlorineType: chlorineTypeId
+  });
+  res.json({ formattedDose });
+});
+// --- NEW API ENDPOINT for Sodium Thiosulfate Dose Table ---
+app.post('/api/calculate-thiosulfate-table', (req, res) => {
+  console.log("Server received in /api/calculate-thiosulfate-table, req.body:", JSON.stringify(req.body, null, 2));
+  const { currentFC, poolVolume } = req.body;
+
+  if (typeof currentFC !== 'number' || typeof poolVolume !== 'number' || poolVolume <= 0 || currentFC < 0) {
+      console.error("Error in /api/calculate-thiosulfate-table: Invalid input parameters.", req.body);
+      return res.status(400).json({ error: "Invalid input: currentFC must be a non-negative number, and poolVolume must be a positive number." });
+  }
+
+  try {
+      const tableData = getThiosulfateDoseTableData(currentFC, poolVolume);
+      res.json({ tableRows: tableData });
+  } catch (error) {
+      console.error("Exception in /api/calculate-thiosulfate-table:", error);
+      res.status(500).json({ error: "Failed to calculate thiosulfate dose table." });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

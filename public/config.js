@@ -14,7 +14,7 @@ const poolStandards = {
         pH: { min: 7.2, max: 7.8 },
         alkalinity: { min: 60, max: 180 },
         cya: { min: 0, max: 100 },
-        calcium: { min: 150, max: 1000 }
+        calcium: { min: 150, max: 1000 } 
       }
     },
     Florida: {

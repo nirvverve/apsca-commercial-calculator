@@ -4,7 +4,7 @@ const GOLDEN_NUMBERS = {
     texas:   { alkalinity: 120, calcium: 400, ph: 7.5, cya: 80},
     florida: { alkalinity: 80, calcium: 300, ph: 7.6, cya: 50},
 };
-  
+   
 const FL_THRESHOLDS = { alkalinity: 60, calcium: 200, cya: 30 };
 
 const ALKALINITY_FACTORS = [

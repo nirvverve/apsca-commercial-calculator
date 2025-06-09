@@ -42,7 +42,7 @@ function lbsToLbsOz(lbs) {
     if (oz > 0) result += (result ? ' ' : '') + `${oz.toFixed(1)} oz`; // .toFixed(1) for consistency if needed
     if (!result) result = '0 oz';
     return result;
-}
+} 
 
 // Utility to convert pounds of liquid chlorine (12.5%) to gallons and fluid ounces
 // 1 gallon of 12.5% liquid chlorine weighs about 10 lbs

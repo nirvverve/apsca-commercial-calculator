@@ -3,7 +3,7 @@ import { poolStandards } from '../config.js';
 export function renderChlorineScaleDisplay({
   state,
   poolType,
-  currentFC,
+  currentFC, 
   cya
 }) {
   const standards = poolStandards[state]?.[poolType];

@@ -4,14 +4,12 @@ import { renderCalciumHardnessDisplay } from './CalciumHardnessDisplay.js';
 import { renderPhDisplay } from './PhDisplay.js';
 import { renderCyaDisplay } from './CyaDisplay.js';
 import { renderTdsDisplay } from './TdsDisplay.js';
-import { formatChlorineDose } from './ChlorineDoseUtils.js';
 import { renderChlorineScaleDisplay } from './ChlorineScaleDisplay.js';
 import { renderLSIScale, renderLSIComponentsTable } from './LsiDisplay.js';
 import { renderWaterBalanceSteps } from './WaterBalanceDisplay.js';
 import { renderTodayDosageCards } from './WaterBalanceUtils.js';
 import { renderBreakpointChlorination } from './BreakpointChlorinationDisplay.js';
-import { advancedLSI, getLSIFactors } from './lsiutils.js'; 
-
+ 
 // --- State and Pool Type Buttons ---
 const stateOptionsDiv = document.getElementById('stateOptions');
 const poolTypeOptionsDiv = document.getElementById('poolTypeOptions');
@@ -132,7 +130,8 @@ function getWarnings(values, standards) {
 }
 
 // --- Dose Visualization Table ---
-function renderChlorineDoseTable({currentFC, poolVolume, chlorineType, minFC, maxFC, increment}) {
+// Modified to fetch data from the server
+async function renderChlorineDoseTable({currentFC, poolVolume, chlorineType, minFC, maxFC, increment}) {
   let html = `<h3>Manual Chlorine Addition Guide</h3>
     <table class="dose-table">
     <thead>
@@ -143,21 +142,42 @@ function renderChlorineDoseTable({currentFC, poolVolume, chlorineType, minFC, ma
     </thead>
     <tbody>
   `;
-  for (let fc = minFC; fc <= maxFC; fc += increment) {
-    const dose = fc > currentFC
-      ? ((fc - currentFC) * poolVolume * 0.00000834) / chlorineType.concentration
-      : 0;
-    html += `<tr>
-      <td>${fc.toFixed(2)}</td>
-      <td>${dose > 0
-        ? formatChlorineDose({
-            lbs: dose,
-            poolType: selectedPoolType, // 'pool' or 'spa'
-            chlorineType: chlorineType.id // 'liquid' or 'cal-hypo'
-          })
-        : '-'}</td>
+
+  try {
+    const response = await fetch('/api/calculate-chlorine-dose-table', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentFC,
+        poolVolume,
+        chlorineTypeId: chlorineType.id, // 'liquid' or 'cal-hypo'
+        chlorineConcentration: chlorineType.concentration,
+        minFC,
+        maxFC,
+        increment,
+        poolType: selectedPoolType // 'pool' or 'spa'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Failed to calculate chlorine dose table: ${response.status}`);
+    }
+
+    const { tableRows } = await response.json();
+
+    tableRows.forEach(row => {
+      html += `<tr>
+      <td>${row.targetFC}</td>
+      <td>${row.doseDisplay}</td>
       </tr>`;
+    });
+
+  } catch (error) {
+    console.error("Error fetching chlorine dose table:", error);
+    html += `<tr><td colspan="2" style="color:red;">Error loading dose information: ${error.message}</td></tr>`;
   }
+
   html += `</tbody></table>`;
   return html;
 }
@@ -292,36 +312,53 @@ if (isExpert) {
 
 // 2. Free Chlorine
 if (expertCustomTargets.hasOwnProperty('freeChlorine') && selectedChlorineType) {
-    const targetFC = expertCustomTargets.freeChlorine;
-    const currentFC = values.freeChlorine;
-    if (targetFC > currentFC) {
-        const doseLbs = ((targetFC - currentFC) * values.poolVolume * 0.00000834) / selectedChlorineType.concentration;
-        if (doseLbs > 0.001) {
-            adjustmentNeeded = true;
-            const chlorineDoseFormatted = formatChlorineDose({
-                lbs: doseLbs,
-                poolType: selectedPoolType,
-                chlorineType: selectedChlorineType.id
-            });
-            const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES['freeChlorine'] || 'other-gray';
-            // 2. Card-based output & 3. Include tested value
-            adjustmentCardsHtml += `
-                <div class="expert-dosage-card ${cardClass}">
-                    To adjust <strong>Free Chlorine</strong> from tested value of <strong>${currentFC.toFixed(1)} ppm</strong> to target of <strong>${targetFC.toFixed(1)} ppm</strong>:
-                    <ul>
-                        <li>Add ${chlorineDoseFormatted} of ${selectedChlorineType.name}</li>
-                    </ul>
-                </div>
-            `;
-        }
-    } else if (targetFC < currentFC) {
-        const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES['freeChlorine'] || 'other-gray';
-        adjustmentCardsHtml += `
-            <div class="expert-dosage-card ${cardClass}">
-                <strong>Free Chlorine</strong> target (<strong>${targetFC.toFixed(1)} ppm</strong>) is below current level (${currentFC.toFixed(1)} ppm). No increase needed. Consider Sodium Thiosulfate if reduction is desired.
-            </div>
-        `;
-    }
+  const targetFC = expertCustomTargets.freeChlorine;
+  const currentFC = values.freeChlorine;
+  if (targetFC > currentFC) {
+      const doseLbs = ((targetFC - currentFC) * values.poolVolume * 0.0000834) / selectedChlorineType.concentration;
+      if (doseLbs > 0.001) { // Only proceed if dose is significant
+          adjustmentNeeded = true;
+          let chlorineDoseFormatted = "Error formatting dose.";
+          try {
+              const doseFormatResponse = await fetch('/api/format-chlorine-dose', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      lbs: doseLbs,
+                      poolType: selectedPoolType,
+                      chlorineTypeId: selectedChlorineType.id
+                  })
+              });
+              if (!doseFormatResponse.ok) {
+                  const errorData = await doseFormatResponse.json();
+                  throw new Error(errorData.error || `Format dose API failed: ${doseFormatResponse.status}`);
+              }
+              const { formattedDose } = await doseFormatResponse.json();
+              chlorineDoseFormatted = formattedDose;
+
+          } catch (apiError) {
+              console.error("Error fetching formatted chlorine dose for expert mode:", apiError);
+              chlorineDoseFormatted = `Could not format dose: ${apiError.message}`;
+          }
+
+          const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES['freeChlorine'] || 'other-gray';
+          adjustmentCardsHtml += `
+          <div class="expert-dosage-card ${cardClass}">
+          To adjust <strong>Free Chlorine</strong> from tested value of <strong>${currentFC.toFixed(1)} ppm</strong> to target of <strong>${targetFC.toFixed(1)} ppm</strong>:
+          <ul>
+          <li>Add ${chlorineDoseFormatted} of ${selectedChlorineType.name}</li>
+          </ul>
+          </div>
+          `;
+      }
+  } else if (targetFC < currentFC) {
+      const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES['freeChlorine'] || 'other-gray';
+      adjustmentCardsHtml += `
+      <div class="expert-dosage-card ${cardClass}">
+      <strong>Free Chlorine</strong> target (<strong>${targetFC.toFixed(1)} ppm</strong>) is below current level (${currentFC.toFixed(1)} ppm). No increase needed. Consider Sodium Thiosulfate if reduction is desired.
+      </div>
+      `;
+  }
 }
 
 // 3. Salt
@@ -467,7 +504,7 @@ resultsDiv.innerHTML = expertHtml;
   if (!saltDoseResponse.ok) {
     const errorData = await saltDoseResponse.json();
     throw new Error(errorData.error || `Salt Dose API failed: ${saltDoseResponse.status}`);
-  }
+  } 
   const saltDoseApiResult = await saltDoseResponse.json();
   saltDoseHTML = `
     <div class="salt-dose-result">
@@ -481,15 +518,6 @@ resultsDiv.innerHTML = expertHtml;
 }
 // --- End of Salt Dose API Call ---
 
-    // --- Advanced LSI Calculation ---
-    const lsi = advancedLSI({
-      ph: values.ph,
-      tempF: values.temperature,
-      calcium: values.calcium,
-      alkalinity: values.alkalinity,
-      cya: values.cya,
-      tds: values.tds
-  });
 
   // --- Warnings ---
   const warnings = getWarnings(values, standards);
@@ -501,7 +529,7 @@ resultsDiv.innerHTML = expertHtml;
       if (cyaMin > minFC) minFC = cyaMin;
   }
   let maxFC = standards.freeChlorine.max;
-  const doseTableHTML = renderChlorineDoseTable({
+  const doseTableHTML = await renderChlorineDoseTable({
       currentFC: values.freeChlorine,
       poolVolume: values.poolVolume,
       chlorineType: selectedChlorineType,
@@ -562,14 +590,6 @@ resultsDiv.innerHTML = expertHtml;
       poolType: selectedPoolType,
       currentFC: values.freeChlorine,
       cya: values.cya
-  })
-  const lsiFactors = getLSIFactors({
-      ph: values.ph,
-      tempF: values.temperature,
-      calcium: values.calcium,
-      alkalinity: values.alkalinity,
-      cya: values.cya,
-      tds: values.tds
   });
   const LSIScaleHTML = renderLSIScale(lsiApiData.lsi);
   const LSIComponentsTableHTML = renderLSIComponentsTable(lsiApiData);
@@ -754,34 +774,70 @@ document.addEventListener('DOMContentLoaded', () => {
     if (input) input.addEventListener('input', updateLSIDisplay);
   });
 
-  function updateLSIDisplay() {
-    // Get current values
-    const current = {
+  // Debounce function
+  let debounceTimer;
+  function debounce(func, delay) {
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => func.apply(context, args), delay);
+    }
+  }
+
+  // MODIFIED updateLSIDisplay to use API
+  async function updateLSIDisplay() {
+    // Get current values from main form inputs
+    const currentParams = {
       ph: parseFloat(document.getElementById('ph').value) || 0,
       alkalinity: parseFloat(document.getElementById('alkalinity').value) || 0,
       calcium: parseFloat(document.getElementById('calcium').value) || 0,
       cya: parseFloat(document.getElementById('cya').value) || 0,
-      tds: parseFloat(document.getElementById('tds').value) || 1000,
-      tempF: parseFloat(document.getElementById('temperature').value) || 77
+      tds: parseFloat(document.getElementById('tds').value) || 1000, // Default TDS if not entered
+      tempF: parseFloat(document.getElementById('temperature').value) || 77 // Default temp if not entered
     };
-    // Get target values
-    const targets = {
+    // Get target values from expert mode inputs
+    const targetParams = {
       ph: parseFloat(targetInputs.ph.value) || 0,
       alkalinity: parseFloat(targetInputs.alkalinity.value) || 0,
       calcium: parseFloat(targetInputs.calcium.value) || 0,
       cya: parseFloat(targetInputs.cya.value) || 0,
-      tds: current.tds,
-      tempF: current.tempF
+      tds: currentParams.tds, // Assume TDS and Temp don't have separate targets in expert LSI preview
+      tempF: currentParams.tempF
     };
-    // Calculate LSI for current and targets
-    if (typeof advancedLSI === 'function') {
-      const lsiCurrent = advancedLSI(current);
-      const lsiTarget = advancedLSI(targets);
-      if (lsiCurrentDisplay) lsiCurrentDisplay.textContent = lsiCurrent.toFixed(2);
-      if (lsiTargetDisplay) lsiTargetDisplay.textContent = lsiTarget.toFixed(2);
-    } else {
-      if (lsiCurrentDisplay) lsiCurrentDisplay.textContent = '-';
-      if (lsiTargetDisplay) lsiTargetDisplay.textContent = '-';
+
+    try {
+      // Fetch LSI for current parameters
+      if (lsiCurrentDisplay) lsiCurrentDisplay.textContent = 'Calculating...';
+      const currentLsiResponse = await fetch('/api/calculate-lsi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentParams)
+      });
+      if (currentLsiResponse.ok) {
+        const currentLsiData = await currentLsiResponse.json();
+        if (lsiCurrentDisplay) lsiCurrentDisplay.textContent = currentLsiData.lsi.toFixed(2);
+      } else {
+        if (lsiCurrentDisplay) lsiCurrentDisplay.textContent = 'Error';
+      }
+
+      // Fetch LSI for target parameters
+      if (lsiTargetDisplay) lsiTargetDisplay.textContent = 'Calculating...';
+      const targetLsiResponse = await fetch('/api/calculate-lsi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(targetParams)
+      });
+      if (targetLsiResponse.ok) {
+        const targetLsiData = await targetLsiResponse.json();
+        if (lsiTargetDisplay) lsiTargetDisplay.textContent = targetLsiData.lsi.toFixed(2);
+      } else {
+        if (lsiTargetDisplay) lsiTargetDisplay.textContent = 'Error';
+      }
+    } catch (error) {
+      console.error("Error updating LSI display:", error);
+      if (lsiCurrentDisplay) lsiCurrentDisplay.textContent = 'Error';
+      if (lsiTargetDisplay) lsiTargetDisplay.textContent = 'Error';
     }
   }
 
@@ -814,27 +870,7 @@ thioCalcModal.addEventListener('click', (e) => {
     thioForm.reset();
   }
 });
-
-// Sodium thiosulfate dose calculation
-function calculateThioDose(currentFC, targetFC, poolVolume) {
-  // 1.3 oz per 1 ppm per 10,000 gallons
-  const ppmToRemove = currentFC - targetFC;
-  if (ppmToRemove <= 0) return 0;
-  return ppmToRemove * (poolVolume / 10000) * 1.3;
-}
-// Helper to format ounces as "X oz (Y lb Z oz)"
-function formatOunces(oz) {
-  const lbs = Math.floor(oz / 16);
-  const remOz = oz % 16;
-  if (lbs > 0) {
-    return `${oz.toFixed(2)} oz (${lbs} lb${lbs > 1 ? 's' : ''} ${remOz.toFixed(2)} oz)`;
-  } else {
-    return `${oz.toFixed(2)} oz`;
-  }
-}
-
-// Render the step table
-function renderThioTable(currentFC, poolVolume) {
+async function renderThioTableFromServer(currentFC, poolVolume, thioResultsElement) {
   let html = `
     <div style="background:#fffde7;border-left:5px solid #fbc02d;padding:12px 18px;margin-bottom:1em;border-radius:7px;">
       <strong>Note:</strong> Sodium thiosulfate can take up to two hours to work. Add <b>half</b> the required dose, wait two hours, and retest. If needed, add the remaining amount.
@@ -849,43 +885,58 @@ function renderThioTable(currentFC, poolVolume) {
       </thead>
       <tbody>
   `;
-  // 5 ppm steps from current down to 10
-  for (let fc = Math.floor(currentFC / 5) * 5; fc > 10; fc -= 5) {
-    if (fc < 0) break;
-    if (fc < currentFC) {
-      const dose = calculateThioDose(currentFC, fc, poolVolume);
-      html += `<tr><td>${fc.toFixed(1)}</td><td>${formatOunces(dose)}</td></tr>`;
+  try {
+    const response = await fetch('/api/calculate-thiosulfate-table', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentFC, poolVolume })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Thiosulfate table API failed: ${response.status}`);
     }
-  }
-  // 1.0 ppm steps from 10 down to 0
-  for (let fc = 10; fc >= 0; fc -= 1.0) {
-    if (fc < 0) fc = 0;
-    if (fc < currentFC) {
-      const dose = calculateThioDose(currentFC, fc, poolVolume);
-      html += `<tr><td>${fc.toFixed(1)}</td><td>${formatOunces(dose)}</td></tr>`;
+
+    const { tableRows } = await response.json();
+
+    if (tableRows && tableRows.length > 0) {
+        tableRows.forEach(row => {
+            html += `<tr><td>${row.targetFCDisplay}</td><td>${row.doseDisplay}</td></tr>`;
+        });
+    } else {
+        html += `<tr><td colspan="2">No chlorine reduction needed or current FC is already low.</td></tr>`;
     }
-    if (fc === 0) break;
+
+  } catch (error) {
+    console.error("Error fetching thiosulfate table data:", error);
+    html += `<tr><td colspan="2" style="color:red;">Error loading dose information: ${error.message}</td></tr>`;
   }
+
   html += `</tbody></table>
     <div style="margin-top:1em;font-size:0.98em;color:#757575;">
-      <em>Always retest pH and alkalinity after treatment.</em>
+    <em>Always retest pH and alkalinity after treatment.</em>
     </div>
   `;
-  return html;
+  thioResultsElement.innerHTML = html; // Update the specific results element
 }
 
-// Form submit handler
-thioForm.addEventListener('submit', function(e) {
+// Form submit handler - MODIFIED
+thioForm.addEventListener('submit', async function(e) { // Made async
   e.preventDefault();
   const poolVolume = parseFloat(document.getElementById('thioPoolVolume').value);
   const currentFC = parseFloat(document.getElementById('thioCurrentFC').value);
-  const ph = parseFloat(document.getElementById('thioPH').value);
+  const ph = parseFloat(document.getElementById('thioPH').value); // Keep pH for client-side warning
 
-  // pH warning
+  // Clear previous results first
+  thioResults.innerHTML = '<p>Calculating...</p>';
+
+  // pH warning (remains client-side)
   let warning = '';
   if (ph < 7.2) {
     warning = `<div style="color:#b71c1c;font-weight:bold;margin-bottom:0.7em;">Warning: pH is already low. Sodium thiosulfate may lower pH further. Adjust pH before neutralizing chlorine.</div>`;
   }
+  
 
-  thioResults.innerHTML = warning + renderThioTable(currentFC, poolVolume);
+  thioResults.innerHTML = warning;
+  await renderThioTableFromServer(currentFC, poolVolume, thioResults);
 });

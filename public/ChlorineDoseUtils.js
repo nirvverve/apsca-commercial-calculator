@@ -1,7 +1,7 @@
 // Utility for rounding to nearest 1/16 (for gallons or pounds)
 function roundToNearestSixteenth(value) {
     return Math.round(value * 16) / 16;
-  }
+  } 
    
   // Utility to express a decimal as a mixed fraction string (e.g., 0.125 -> "1/8")
   function toMixedFraction(value, unit, fractionDenominator = 4) {
