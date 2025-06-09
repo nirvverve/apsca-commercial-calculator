@@ -8,10 +8,9 @@ import { formatChlorineDose } from './ChlorineDoseUtils.js';
 import { renderChlorineScaleDisplay } from './ChlorineScaleDisplay.js';
 import { renderLSIScale, renderLSIComponentsTable } from './LsiDisplay.js';
 import { renderWaterBalanceSteps } from './WaterBalanceDisplay.js';
-import { getSaltDose } from './SaltDoseUtils.js';
-import { renderTodayDosageCards, getWaterBalanceSteps } from './WaterBalanceUtils.js';
+import { renderTodayDosageCards } from './WaterBalanceUtils.js';
 import { renderBreakpointChlorination } from './BreakpointChlorinationDisplay.js';
-import { advancedLSI, getLSIFactors } from './lsiutils.js';
+import { advancedLSI, getLSIFactors } from './lsiutils.js'; 
 
 // --- State and Pool Type Buttons ---
 const stateOptionsDiv = document.getElementById('stateOptions');
@@ -163,7 +162,7 @@ function renderChlorineDoseTable({currentFC, poolVolume, chlorineType, minFC, ma
   return html;
 }
 // --- Form Submission ---
-document.getElementById('poolForm').addEventListener('submit', function(e) {
+document.getElementById('poolForm').addEventListener('submit', async function(e) {
   e.preventDefault();
 
   // Validate chlorine type selection
@@ -250,34 +249,46 @@ if (isExpert) {
   if (expertCustomTargets.hasOwnProperty('cya')) expertBalanceTargetsInput.cya = expertCustomTargets.cya;
 
   if (Object.keys(expertBalanceTargetsInput).length > 0) {
-      const { steps } = getWaterBalanceSteps({
-          poolType: selectedPoolType,
-          poolVolume: values.poolVolume,
-          current: currentValuesForBalance,
-          targets: expertBalanceTargetsInput, // Pass only the explicitly set expert targets
-          tempF: values.temperature,
-          tds: values.tds
-          // Consider adding an isExpertMode flag to getWaterBalanceSteps if its internal logic needs to change
-          // For now, we filter its output here.
-      });
+      // ---- MODIFICATION START ----
+      try {
+        const waterBalanceResponse = await fetch('/api/calculate-water-balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            poolType: selectedPoolType,
+            poolVolume: values.poolVolume,
+            current: currentValuesForBalance,
+            targets: expertBalanceTargetsInput,
+            tempF: values.temperature,
+            tds: values.tds
+          })
+        });
 
-      steps.forEach(step => {
-        if (step.dose && expertBalanceTargetsInput.hasOwnProperty(step.key)) {
+        if (!waterBalanceResponse.ok) {
+          const errorData = await waterBalanceResponse.json();
+          throw new Error(errorData.error || `Water balance API failed with status: ${waterBalanceResponse.status}`);
+        }
+
+        const { steps } = await waterBalanceResponse.json(); // Destructure 'steps' from the API response
+        // ---- MODIFICATION END ----
+
+        steps.forEach(step => {
+          if (step.dose && expertBalanceTargetsInput.hasOwnProperty(step.key)) {
             adjustmentNeeded = true;
             const unit = step.key === 'ph' ? '' : ' ppm';
             const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES[step.key] || 'other-gray';
-            // 2. Card-based output & 3. Include tested value
             adjustmentCardsHtml += `
-                <div class="expert-dosage-card ${cardClass}">
-                    To adjust <strong>${step.parameter}</strong> from tested value of <strong>${step.current}${unit}</strong> to target of <strong>${step.target}${unit}</strong>:
-                    <ul>
-                        <li>${step.dose}</li>
-                    </ul>
-                </div>
-            `;
-        }
-    });
-}
+              <div class="expert-dosage-card ${cardClass}">
+                To adjust <strong>${step.parameter}</strong> from tested value of <strong>${step.current}${unit}</strong> to target of <strong>${step.target}${unit}</strong>:
+                <ul><li>${step.dose}</li></ul>
+              </div>`;
+          }
+        });
+      } catch (apiError) {
+        console.error("Error fetching/processing water balance for expert mode:", apiError);
+        adjustmentCardsHtml += `<div class="expert-dosage-card error-card">Could not calculate water balance adjustments: ${apiError.message}</div>`;
+      }
+    }
 
 // 2. Free Chlorine
 if (expertCustomTargets.hasOwnProperty('freeChlorine') && selectedChlorineType) {
@@ -315,36 +326,57 @@ if (expertCustomTargets.hasOwnProperty('freeChlorine') && selectedChlorineType) 
 
 // 3. Salt
 if (expertCustomTargets.hasOwnProperty('salt')) {
-    const targetSaltExpert = expertCustomTargets.salt;
-    const currentSalt = values.saltLevel;
-    if (targetSaltExpert > currentSalt) {
-         const saltDoseResult = getSaltDose({
-            currentSalt: currentSalt,
-            targetSalt: targetSaltExpert,
-            poolVolume: values.poolVolume
-        });
-        if (saltDoseResult && saltDoseResult.lbsNeeded > 0) {
-            adjustmentNeeded = true;
-            const saltDoseMessage = saltDoseResult.display.replace(` to reach ${targetSaltExpert} ppm.`, '').replace(` to reach ${targetSaltExpert.toFixed(0)} ppm.`, '');
-            const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES['salt'] || 'other-gray';
-             // 2. Card-based output & 3. Include tested value
-            adjustmentCardsHtml += `
-                <div class="expert-dosage-card ${cardClass}">
-                    To adjust <strong>Salt Level</strong> from tested value of <strong>${currentSalt} ppm</strong> to target of <strong>${targetSaltExpert} ppm</strong>:
-                    <ul>
-                        <li>${saltDoseMessage}</li>
-                    </ul>
-                </div>
-            `;
+  const targetSaltExpert = expertCustomTargets.salt;
+  const currentSalt = values.saltLevel;
+
+  if (targetSaltExpert > currentSalt) {
+    // --- Salt Dose via API for Expert Mode ---
+    try {
+      const saltDoseResponse = await fetch('/api/calculate-salt-dose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentSalt: currentSalt,
+          targetSalt: targetSaltExpert,
+          poolVolume: values.poolVolume
+        })
+      });
+
+      if (!saltDoseResponse.ok) {
+        const errorData = await saltDoseResponse.json();
+        throw new Error(errorData.error || `Salt Dose API failed: ${saltDoseResponse.status}`);
+      }
+      const saltDoseApiResult = await saltDoseResponse.json();
+      // --- End of Salt Dose API Call ---
+
+      if (saltDoseApiResult && saltDoseApiResult.lbsNeeded > 0) {
+        adjustmentNeeded = true;
+        // Use the display message from the API, remove parts if necessary
+        let saltDoseMessage = saltDoseApiResult.display;
+        if (typeof saltDoseMessage === 'string') {
+             saltDoseMessage = saltDoseMessage.replace(` to reach ${targetSaltExpert} ppm.`, '')
+                                             .replace(` to reach ${targetSaltExpert.toFixed(0)} ppm.`, '');
+        } else {
+            saltDoseMessage = "Error retrieving salt dose message.";
         }
-    } else if (targetSaltExpert < currentSalt && targetSaltExpert >= 0) {
+
         const cardClass = EXPERT_PARAM_BACKGROUND_CLASSES['salt'] || 'other-gray';
         adjustmentCardsHtml += `
-            <div class="expert-dosage-card ${cardClass}">
-                <strong>Salt</strong> target (<strong>${targetSaltExpert} ppm</strong>) is not above current level (${currentSalt} ppm). No salt addition needed.
-            </div>
+          <div class="expert-dosage-card ${cardClass}">
+            To adjust <strong>Salt Level</strong> from tested value of <strong>${currentSalt} ppm</strong> to target of <strong>${targetSaltExpert} ppm</strong>:
+            <ul>
+              <li>${saltDoseMessage}</li>
+            </ul>
+          </div>
         `;
+      }
+    } catch (apiError) {
+      console.error("Error fetching salt dose data for expert mode:", apiError);
+      adjustmentCardsHtml += `<div class="expert-dosage-card error-card">Could not calculate salt dose: ${apiError.message}</div>`;
     }
+  } else if (targetSaltExpert < currentSalt && targetSaltExpert >= 0) {
+    // ... (existing logic for target not above current) ...
+  }
 }
 
 if (!adjustmentNeeded && Object.keys(expertCustomTargets).length > 0) {
@@ -358,6 +390,97 @@ resultsDiv.innerHTML = expertHtml;
 
 } else {
   // STANDARD MODE: Original full results rendering logic
+  const currentValuesForBalance = {
+    cya: values.cya,
+    alkalinity: values.alkalinity,
+    calcium: values.calcium,
+    ph: values.ph
+  };
+
+  let waterBalanceData = { steps: [], notes: [] }; // Default empty data
+
+  try {
+    // ---- ADD API CALL FOR WATER BALANCE DATA ----
+    const waterBalanceResponse = await fetch('/api/calculate-water-balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        poolType: selectedPoolType,
+        poolVolume: values.poolVolume,
+        current: currentValuesForBalance,
+        targets: {}, // Standard mode uses goldenNumber targets, handled by server
+        tempF: values.temperature,
+        tds: values.tds
+      })
+    });
+
+    if (!waterBalanceResponse.ok) {
+      const errorData = await waterBalanceResponse.json();
+      throw new Error(errorData.error || `Water balance API failed with status: ${waterBalanceResponse.status}`);
+    }
+    waterBalanceData = await waterBalanceResponse.json(); // Should be { steps, notes }
+    // ---- END OF API CALL ----
+  } catch (apiError) {
+    console.error("Error fetching/processing water balance for standard mode:", apiError);
+    // Display an error message to the user if the API call fails
+    standardHtml += `<div class="error-card">Could not calculate water balance recommendations: ${apiError.message}</div>`;
+    // You might want to stop further processing or display a partial result
+  }
+   // --- LSI Calculation via API ---
+   let lsiApiData = { lsi: 0, pHf: 0, Tf: 0, CHf: 0, ALKf: 0, CYAf: 0, TDSf: 0 }; // Default
+   try {
+     const lsiResponse = await fetch('/api/calculate-lsi', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         ph: values.ph,
+         tempF: values.temperature,
+         calcium: values.calcium,
+         alkalinity: values.alkalinity,
+         cya: values.cya,
+         tds: values.tds
+       })
+     });
+     if (!lsiResponse.ok) {
+       const errorData = await lsiResponse.json();
+       throw new Error(errorData.error || `LSI API failed with status: ${lsiResponse.status}`);
+     }
+     lsiApiData = await lsiResponse.json(); // Expects { lsi, pHf, Tf, CHf, ALKf, CYAf, TDSf }
+   } catch (apiError) {
+     console.error("Error fetching LSI data:", apiError);
+     // Handle error, maybe display a message for LSI section
+   }
+   // --- End of LSI API Call ---
+
+   // --- Salt Dose via API ---
+  let saltDoseHTML = '<div class="salt-dose-result"><h4>Salt Addition Recommendation</h4><p>Calculating...</p></div>'; // Default
+  try {
+  const saltDoseResponse = await fetch('/api/calculate-salt-dose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      currentSalt: values.saltLevel,
+      targetSalt: values.targetSaltLevel, // Standard mode uses the dropdown target
+      poolVolume: values.poolVolume
+    })
+  });
+  if (!saltDoseResponse.ok) {
+    const errorData = await saltDoseResponse.json();
+    throw new Error(errorData.error || `Salt Dose API failed: ${saltDoseResponse.status}`);
+  }
+  const saltDoseApiResult = await saltDoseResponse.json();
+  saltDoseHTML = `
+    <div class="salt-dose-result">
+      <h4>Salt Addition Recommendation</h4>
+      <p>${saltDoseApiResult.display}</p>
+    </div>
+  `;
+} catch (apiError) {
+  console.error("Error fetching salt dose data:", apiError);
+  saltDoseHTML = `<div class="salt-dose-result error-card">Could not calculate salt dose: ${apiError.message}</div>`;
+}
+// --- End of Salt Dose API Call ---
+
     // --- Advanced LSI Calculation ---
     const lsi = advancedLSI({
       ph: values.ph,
@@ -386,40 +509,23 @@ resultsDiv.innerHTML = expertHtml;
       maxFC,
       increment: 0.5
   });
-  const BreakpointChlorinationHTML = renderBreakpointChlorination({
+  const BreakpointChlorinationHTML = await renderBreakpointChlorination({
       freeChlorine: values.freeChlorine,
       totalChlorine: values.totalChlorine,
       poolVolume: values.poolVolume,
       chlorineType: selectedChlorineType
   });
   const todayDosageCardsHTML = renderTodayDosageCards({
-      poolType: selectedPoolType,
-      poolVolume: values.poolVolume,
-      current: {
-      cya: values.cya,
-      alkalinity: values.alkalinity,
-      calcium: values.calcium,
-      ph: values.ph
-      },
-      targets: {}, // Standard mode uses golden numbers within renderTodayDosageCards
-      tempF: values.temperature,
-      tds: values.tds,
+      steps: waterBalanceData.steps,
+      notes: waterBalanceData.notes,
+      BreakpointChlorinationHTML,
       freeChlorine: values.freeChlorine,
-      totalChlorine: values.totalChlorine,
-      doseTableHTML, // Pass this for inclusion in standard display
-      BreakpointChlorinationHTML // Pass this for inclusion
+      totalChlorine: values.totalChlorine
   });
-  const saltDoseResult = getSaltDose({
-      currentSalt: values.saltLevel,
-      targetSalt: values.targetSaltLevel, // Standard mode uses the dropdown target
-      poolVolume: values.poolVolume
+  const waterBalanceStepsHTML = renderWaterBalanceSteps({
+    steps: waterBalanceData.steps,
+    notes: waterBalanceData.notes
   });
-  const saltDoseHTML = `
-  <div class="salt-dose-result">
-      <h4>Salt Addition Recommendation</h4>
-      <p>${saltDoseResult.display}</p>
-  </div>
-  `;
   const alkDisplayHTML = renderAlkalinityDisplay({
       state: selectedState,
       poolType: selectedPoolType,
@@ -465,19 +571,8 @@ resultsDiv.innerHTML = expertHtml;
       cya: values.cya,
       tds: values.tds
   });
-  const LSIScaleHTML = renderLSIScale(lsiFactors.lsi);
-  const LSIComponentsTableHTML = renderLSIComponentsTable(lsiFactors);
-  const waterBalanceStepsHTML = renderWaterBalanceSteps({ // This is the function from WaterBalanceDisplay.js for the full table
-    poolType: selectedPoolType,
-    poolVolume: values.poolVolume,
-    current: {
-      cya: values.cya,
-      alkalinity: values.alkalinity,
-      calcium: values.calcium,
-      ph: values.ph
-    },
-    // Standard mode uses golden numbers internally in renderWaterBalanceSteps
-  });
+  const LSIScaleHTML = renderLSIScale(lsiApiData.lsi);
+  const LSIComponentsTableHTML = renderLSIComponentsTable(lsiApiData);
 
   resultsDiv.innerHTML = `
   <h2>Full Details</h2>

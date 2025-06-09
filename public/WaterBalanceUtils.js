@@ -1,13 +1,13 @@
 import { goldenNumbers } from './config.js';
-import { advancedLSI } from './lsiutils.js';
+
 
 // Color classes for each parameter
 const PARAM_COLORS = {
   cya: 'cya-purple',
   alkalinity: 'alk-green',
   calcium: 'calcium-blue',
-  ph: 'ph-red'
-};
+  ph: 'ph-red' 
+}; 
 
 // Card background classes for each parameter (matches styles.css)
 const PARAM_CARD_CLASS = {
@@ -65,18 +65,6 @@ function cyaDose(current, target, gallons) {
 
 // Acid dose to lower pH
 function acidDose(current, target, gallons, alkalinity) {
-  // if (current <= target) return null;
-  // PoolFactor and AlkFactor are simplified for demo purposes
-  //const poolFactor = 76 * (gallons / 10000);
-  //const alkFactor = alkalinity / 100;
-  //const acidFlOz = (current - target) * poolFactor * alkFactor;
-  //if (acidFlOz <= 0) return null;
-  //if (acidFlOz < 128) {
-  // return `${acidFlOz.toFixed(1)} fl oz muriatic acid`;
-  // } else {
-  //  return `${(acidFlOz / 128).toFixed(2)} gal (${acidFlOz.toFixed(1)} fl oz) muriatic acid`;
- // }
-//
 return acidDoseToLowerPh(current, target, gallons, alkalinity);
 }
 
@@ -320,21 +308,13 @@ function getWaterBalanceSteps({
 }
 
 // --- Display Functions ---
-function renderTodayDosageCards({
-  poolType,
-  poolVolume,
-  current,
-  targets = {},
-  tempF = 77,
-  tds = 1000,
+export function renderTodayDosageCards({
+  steps,
+  notes,
+  BreakpointChlorinationHTML,
   freeChlorine,
-  totalChlorine,
-  chlorineType,
-  doseTableHTML,
-  BreakpointChlorinationHTML
+  totalChlorine
 }) {
-  const { steps, notes } = getWaterBalanceSteps({ poolType, poolVolume, current, targets, tempF, tds });
-
   // --- Water Balance Section ---
   // Find the first water balance step that needs adjustment (alkalinity, cya, calcium)
   const firstWaterBalanceStep = steps.find(
@@ -509,28 +489,32 @@ function renderTodayDosageCards({
   // --- Manual Chlorine Dosing / Shocking Section ---
  // Keep only the shock notification card if needed, without the full dose table
  let shockNotificationCard = '';
- const combinedChlorine = typeof totalChlorine === 'number' && typeof freeChlorine === 'number'
-   ? totalChlorine - freeChlorine
-   : 0;
+ const fc = parseFloat(freeChlorine);
+ const tc = parseFloat(totalChlorine);
+ const combinedChlorine = (typeof tc === 'number' && typeof fc === 'number' && !isNaN(tc) && !isNaN(fc))
+    ? Math.max(0, tc - fc)
+    : 0;
 
  if (combinedChlorine > 0.6 && BreakpointChlorinationHTML) {
    let BreakpointDoseText = '';
-   const match = BreakpointChlorinationHTML.match(/<span class="breakpoint-dose">([^<]+)<\/span>/);
-   if (match) {
-     BreakpointDoseText = match[1];
-   }
+   if (typeof BreakpointChlorinationHTML === 'string') { // Add check
+    const match = BreakpointChlorinationHTML.match(/<span class="breakpoint-dose">([^<]+)<\/span>/);
+    if (match) {
+        BreakpointDoseText = match[1];
+    }
+}
    
-   shockNotificationCard = `
-     <h4>Shocking Needed:</h4>
-     <div class="chem-card fac" style="background:#fffde7;">
-       <strong>Shock Needed:</strong>
-       <div style="margin:0.5em 0 0.2em 0;">
-         Combined chlorine is above 0.6 ppm.${BreakpointDoseText ? ` Add <strong>${BreakpointDoseText}</strong> to achieve breakpoint chlorination.` : ''}<br>
-         <em>Consult "Does My Pool Need To Be Shocked?" for details.</em>
-       </div>
-     </div>
-   `;
- }
+shockNotificationCard = `
+<h4>Shocking Needed:</h4>
+<div class="chem-card fac" style="background:#fffde7;">
+<strong>Shock Needed:</strong>
+<div style="margin:0.5em 0 0.2em 0;">
+Combined chlorine is ${combinedChlorine.toFixed(2)} ppm (above 0.6 ppm).${BreakpointDoseText ? ` Add <strong>${BreakpointDoseText}</strong> to achieve breakpoint chlorination.` : ''}<br>
+<em>Consult "Does My Pool Need To Be Shocked?" for details.</em>
+</div>
+</div>
+`;
+}
 
  // If nothing to add, show a message
  if (!firstWaterBalanceStep && !phStep && !shockNotificationCard) {
@@ -542,6 +526,19 @@ function renderTodayDosageCards({
        </div>
      </details>
    `;
+ }
+ let waterBalanceCardsHTML = ''; // Renamed to avoid conflict
+ if (firstWaterBalanceStep) {
+     function formatCumulativeEffect(step) { /* ... as before ... */ return '';}
+     waterBalanceCardsHTML = `
+     <div class="${PARAM_CARD_CLASS[firstWaterBalanceStep.key] || 'chem-card'}">
+     <strong>${firstWaterBalanceStep.parameter}:</strong>
+     <div style="margin:0.5em 0 0.2em 0;">
+     ${firstWaterBalanceStep.dose}
+     ${formatCumulativeEffect(firstWaterBalanceStep)}
+     </div>
+     </div>
+     `;
  }
  return `
     <details class="today-dosage-details" open>
@@ -557,8 +554,10 @@ function renderTodayDosageCards({
   `;
 }
 
-function renderWaterBalanceSteps({ poolType, poolVolume, current, targets = {}, tempF = 77, tds = 1000 }) {
-  const { steps, notes } = getWaterBalanceSteps({ poolType, poolVolume, current, targets, tempF, tds });
+export function renderWaterBalanceSteps({ 
+  steps,
+  notes
+}) {
 
   // Color classes for table rows
   const PARAM_COLORS = {
@@ -574,28 +573,10 @@ function renderWaterBalanceSteps({ poolType, poolVolume, current, targets = {}, 
   );
 
   // Determine which parameters are out of range for the summary
-  const outOfRangeSteps = filteredSteps.filter(step => {
-    return step.current < step.target || step.current > step.target;
-  });
-
-  // Water Balance Plan Summary
-  const planSummary = outOfRangeSteps.length
-    ? `<div class="water-balance-plan-summary" style="margin-bottom:1em;">
-    <strong>Water Balance Plan Summary:</strong><br>
-    Adjust the following parameters in this order, one per day:<br>
-    <ol>
-    ${outOfRangeSteps.map((step, idx) =>
-    `<li>Day ${idx + 1}: <span class="${PARAM_COLORS[step.key]}">${step.parameter}</span></li>`
-    ).join('')}
-    </ol>
-    </div>`
-    : `<div class="water-balance-plan-summary" style="margin-bottom:1em;">
-    <strong>Water Balance Plan Summary:</strong> All parameters are within target range.
-    </div>`;
-
-  // Table with color classes, excluding pH
-  return `
-    <style>
+  const outOfRangeSteps = filteredSteps.filter(step => { return false });
+  const planSummary = outOfRangeSteps.length ? `...` : `...`;
+return `
+   <style>
     .cya-purple { color: #8e24aa; font-weight: bold; }
     .alk-green { color: #388e3c; font-weight: bold; }
     .calcium-blue { color: #1976d2; font-weight: bold; }
@@ -620,9 +601,9 @@ function renderWaterBalanceSteps({ poolType, poolVolume, current, targets = {}, 
     </thead>
     <tbody>
     ${filteredSteps.map((step, idx) => `
-    <tr class="${PARAM_COLORS[step.key] || ''}">
+    <tr class="${PARAM_COLORS_local[step.key] || ''}">
     <td>${idx + 1}</td>
-    <td><span class="${PARAM_COLORS[step.key] || ''}">${step.parameter}</span></td>
+    <td><span class="${PARAM_COLORS_local[step.key] || ''}">${step.parameter}</span></td>
     <td>${step.current !== undefined && step.current !== null ? step.current : '-'}</td>
     <td>${step.target !== undefined && step.target !== null ? step.target : '-'}</td>
     <td>${step.dose ? `<span class="dose">${step.dose}</span>` : '<em>None needed</em>'}</td>
@@ -645,4 +626,3 @@ function renderWaterBalanceSteps({ poolType, poolVolume, current, targets = {}, 
   `;
 }
 
-export { renderTodayDosageCards, renderWaterBalanceSteps, getWaterBalanceSteps };

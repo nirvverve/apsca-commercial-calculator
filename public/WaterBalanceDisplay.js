@@ -1,4 +1,3 @@
-import { getWaterBalanceSteps } from './WaterBalanceUtils.js';
 
 // Color classes for each parameter
 const PARAM_COLORS = {
@@ -19,8 +18,7 @@ const PARAM_COLORS = {
  * @param {number} [tds] - total dissolved solids (ppm)
  * @returns {string} HTML
  */
-export function renderWaterBalanceSteps({ poolType, poolVolume, current, targets = {}, tempF = 77, tds = 1000 }) {
-  const { steps, notes } = getWaterBalanceSteps({ poolType, poolVolume, current, targets, tempF, tds });
+export function renderWaterBalanceSteps({ steps, notes }) {
 
   // Filter to only water balance parameters (excluding pH)
   const waterBalanceSteps = steps.filter(step => ['alkalinity', 'calcium', 'cya'].includes(step.key));

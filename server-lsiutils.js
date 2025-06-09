@@ -20,7 +20,7 @@ const TEMP_FACTORS = [
     { temp: 53, factor: 0.3 }, { temp: 60, factor: 0.4 }, { temp: 66, factor: 0.5 },
     { temp: 76, factor: 0.6 }, { temp: 84, factor: 0.7 }, { temp: 94, factor: 0.8 },
     { temp: 104, factor: 0.9 }, { temp: 128, factor: 1.0 }
-];
+]; 
 
 // TDS correction
 function getTDSFactor(tds) {
@@ -41,7 +41,7 @@ function getFactorCeil(value, table, key = 'ppm') {
 }
 
 // --- Advanced LSI Calculation ---
-export function advancedLSI({ ph, tempF, calcium, alkalinity, cya, tds }) {
+function advancedLSI({ ph, tempF, calcium, alkalinity, cya, tds }) {
     // CYA-corrected alkalinity
     let correctedAlk = parseFloat(alkalinity) - (parseFloat(cya) / 3);
     if (correctedAlk < 0) correctedAlk = 0;
@@ -56,7 +56,7 @@ export function advancedLSI({ ph, tempF, calcium, alkalinity, cya, tds }) {
 }
 
 // --- LSI Factors Helper ---
-export function getLSIFactors({ ph, tempF, calcium, alkalinity, cya, tds }) {
+function getLSIFactors({ ph, tempF, calcium, alkalinity, cya, tds }) {
   // CYA-corrected alkalinity
   let correctedAlk = parseFloat(alkalinity) - (parseFloat(cya) / 3);
   if (correctedAlk < 0) correctedAlk = 0;
@@ -84,3 +84,4 @@ export function getLSIFactors({ ph, tempF, calcium, alkalinity, cya, tds }) {
     cya: parseFloat(cya)
   };
 }
+module.exports = { getLSIFactors, advancedLSI };

@@ -41,7 +41,7 @@ const poolStandards = {
         cya: { min: 0, max: 100 },
         calcium: { min: 150, max: 1000 }
       },
-      spa: {
+      spa: { 
         freeChlorine: { min: 1.0, max: 6.0, cyaRatio: 0.05 },
         pH: { min: 7.2, max: 7.8 },
         alkalinity: { min: 60, max: 180 },

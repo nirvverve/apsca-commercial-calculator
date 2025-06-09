@@ -1,28 +1,131 @@
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-  });
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  });
-  
 const express = require('express');
 const path = require('path');
-const bodyParser = require('body-parser');
-const { calculateLSIAndAdvice } = require('./calculator'); 
-const app = express();
-const PORT = 3000; // or whatever port you use
+const bodyParser = require('body-parser'); // You'll use this later for API requests
+const { getBreakpointChlorination } = require('./server-breakpoint-utils.js');
+const { getWaterBalanceSteps } = require('./server-water-balance-utils.js')
+const { advancedLSI, getLSIFactors } = require('./server-lsiutils.js')
+const { getSaltDose } = require('./server-salt-dose-utils.js');
 
-app.use(express.static(path.join(__dirname))); // serves your HTML, JS, CSS
-app.use(bodyParser.json()); // lets Express read JSON sent from the browser
-app.post('/api/calculate', (req, res) => {
-    try {
-        const result = calculateLSIAndAdvice(req.body);
-        res.json(result);
-    } catch (err) {
-        res.status(500).json({ error: 'Calculation error.' });
-    }
+const app = express();
+const PORT = process.env.PORT || 3000; // Use port 3000 for now
+
+// This tells Express to look in the 'public' folder for files requested by the browser
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Middleware to parse JSON bodies (for when your client sends data to the server API)
+app.use(bodyParser.json());
+
+// A simple check to see if the server is running
+app.get('/', (req, res) => {
 });
 
+// API endpoint for breakpoint chlorination
+app.post('/api/calculate-breakpoint', (req, res) => {
+    try {
+      console.log("Server received in /api/calculate-breakpoint, req.body:", JSON.stringify(req.body, null, 2));
+
+      // Get the input data from the request body (sent by the client)
+      const { freeChlorine, totalChlorine, poolVolume, chlorineType } = req.body;
+
+      if (!chlorineType || typeof chlorineType.concentration === 'undefined') {
+        console.error('Error: chlorineType is missing or invalid in req.body:', chlorineType);
+        return res.status(400).json({ error: "Invalid input: chlorineType is missing or malformed." });
+    }
+  
+      // Perform the calculation using the server-side function
+      const result = getBreakpointChlorination({
+        freeChlorine,
+        totalChlorine,
+        poolVolume,
+        chlorineType
+      });
+  
+      // Send the result back to the client as JSON
+      res.json(result);
+    } catch (error) {
+      console.error("Error in /api/calculate-breakpoint:", error);
+      res.status(500).json({ error: "Failed to calculate breakpoint chlorination." });
+    }
+  });
+  
+  app.post('/api/calculate-water-balance', (req, res) => {
+    try {
+      // Log received data for debugging
+      console.log("Server received in /api/calculate-water-balance, req.body:", JSON.stringify(req.body, null, 2));
+  
+      const {
+        poolType,
+        poolVolume,
+        current,
+        targets, 
+        tempF,
+        tds
+      } = req.body;
+  
+      // Basic validation for required inputs
+      if (!poolType || !poolVolume || !current || typeof tempF === 'undefined') {
+        console.error('Error: Missing required fields for water balance calculation.', req.body);
+        return res.status(400).json({ error: "Missing required fields (poolType, poolVolume, current values, tempF)." });
+      }
+  
+      const result = getWaterBalanceSteps({
+        poolType,
+        poolVolume,
+        current,
+        targets: targets || {}, 
+        tempF,
+        tds: tds || 1000 
+      });
+  
+      res.json(result); 
+    } catch (error) {
+      console.error("Detailed error in /api/calculate-water-balance:", error);
+      res.status(500).json({ error: "Failed to calculate water balance steps." });
+    }
+  });
+  app.post('/api/calculate-lsi', (req, res) => {
+    try {
+      console.log("Server received in /api/calculate-lsi, req.body:", JSON.stringify(req.body, null, 2));
+      const { ph, tempF, calcium, alkalinity, cya, tds } = req.body;
+  
+      if (typeof ph === 'undefined' || typeof tempF === 'undefined' || typeof calcium === 'undefined' ||
+          typeof alkalinity === 'undefined' || typeof cya === 'undefined') {
+        return res.status(400).json({ error: "Missing required LSI parameters." });
+      }
+      const lsiData = getLSIFactors({ ph, tempF, calcium, alkalinity, cya, tds: tds || 1000 });
+  
+      res.json(lsiData); 
+  
+    } catch (error) {
+      console.error("Detailed error in /api/calculate-lsi:", error);
+      res.status(500).json({ error: "Failed to calculate LSI." });
+    }
+  });
+  app.post('/api/calculate-salt-dose', (req, res) => {
+    try {
+      console.log("Server received in /api/calculate-salt-dose, req.body:", JSON.stringify(req.body, null, 2));
+      const { currentSalt, targetSalt, poolVolume } = req.body;
+  
+      if (typeof currentSalt === 'undefined' || typeof targetSalt === 'undefined' || typeof poolVolume === 'undefined') {
+        return res.status(400).json({ error: "Missing required salt dose parameters." });
+      }
+  
+      const result = getSaltDose({
+        currentSalt: parseFloat(currentSalt),
+        targetSalt: parseFloat(targetSalt),
+        poolVolume: parseFloat(poolVolume)
+      });
+  
+      res.json(result); 
+    } catch (error) {
+      console.error("Detailed error in /api/calculate-salt-dose:", error);
+      res.status(500).json({ error: "Failed to calculate salt dose." });
+    }
+  });
+
+
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}/`);
+  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log('Your application should now be accessible by opening a web browser to this address.');
+  console.log('Make sure your index.html and all associated .js and .css files are in the "public" directory.');
 });
